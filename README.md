@@ -20,7 +20,6 @@ Backend docs: `http://localhost:8000/docs`
 
 ```powershell
 cd mobile
-copy .env.example .env
 npm run start
 ```
 
@@ -32,7 +31,6 @@ npm run start
 
 ```powershell
 cd api
-copy .env.example .env
 uv sync
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
