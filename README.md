@@ -9,7 +9,6 @@ Monorepo scaffold:
 
 ```powershell
 cd api
-copy .env.example .env
 uv sync
 uv run uvicorn app.main:app --reload --port 8000
 ```
