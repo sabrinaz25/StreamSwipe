@@ -31,11 +31,11 @@ def vectorize_item(item: FeedItem, *, dim: int = 256) -> np.ndarray:
     return v if n == 0 else (v / n)
 
 
-def update_profile_mean(current: np.ndarray | None, new_vec: np.ndarray, *, n_seen: int) -> np.ndarray:
+def update_profile_mean(current: np.ndarray | None, new_vec: np.ndarray, *, n_seen: int, weight: float = 1.0) -> np.ndarray:
     if current is None or n_seen <= 1:
         merged = new_vec.copy()
     else:
-        merged = (current * float(n_seen - 1) + new_vec) / float(n_seen)
+        merged = (current * float(n_seen - 1) + new_vec * weight) / float(n_seen)
 
     n = np.linalg.norm(merged)
     return merged if n == 0 else (merged / n)

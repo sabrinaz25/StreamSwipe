@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import random
 from typing import Sequence
 
 from dotenv import load_dotenv
@@ -10,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.integrations.tmdb import TMDBClient
 from app.models import (
+    ContentType,
     FeedItem,
     FeedResponse,
     RecommendationResponse,
@@ -66,60 +68,67 @@ async def health() -> dict[str, str]:
 @app.post("/session", response_model=SessionCreateResponse)
 async def create_session(req: SessionCreateRequest) -> SessionCreateResponse:
     session_id = secrets.token_urlsafe(16)
+    random_start = random.randint(1, 5)
     store.sessions[session_id] = SessionState(
         session_id=session_id,
         created_at_ms=store.now_ms(),
         filters=req.filters,
+        tmdb_pages={ct.value: random_start for ct in (req.filters.content_types or [])},
     )
     return SessionCreateResponse(session_id=session_id)
 
 
 @app.get("/feed", response_model=FeedResponse)
-async def get_feed(session_id: str, batch_size: int = 15) -> FeedResponse:
+async def get_feed(session_id: str, batch_size: int = 20) -> FeedResponse:
     s = store.sessions.get(session_id)
     if not s:
         raise HTTPException(status_code=404, detail="session not found")
 
     content_types = s.filters.content_types or []
-    if not content_types:
-        content_types = []
-
     items: list[FeedItem] = []
 
-    # 1) Pull items from TMDB for movie/tv if configured.
     for ct in content_types:
-        if ct.value not in ("movie", "tv"):
+        key = ct.value
+        current_page = s.tmdb_pages.get(key, 1)
+
+        if key == "anime":
+            try:
+                result = await tmdb.discover(content_type=ContentType.tv, genre_ids=[16], page=current_page, extra_params={"with_origin_country": "JP"})
+                for it in result:
+                    it = it.model_copy(update={"content_type": ContentType.anime})
+                    if store.get_item_vec(it.item_id) is None:
+                        store.upsert_item(it, vectorize_item(it))
+                items.extend(result)
+                s.tmdb_pages["anime"] = current_page + 1
+            except Exception as e:
+                continue
+
+        if key not in ("movie", "tv"):
             continue
         try:
-            items.extend(
-                await tmdb.discover(
-                    content_type=ct,
-                    genre_ids=s.filters.genre_ids,
-                    page=1,
-                )
-            )
-        except Exception:
+            result = await tmdb.discover(content_type=ct, genre_ids=s.filters.genre_ids, page=current_page)
+            items.extend(result)
+            s.tmdb_pages[key] = current_page + 1
+        except Exception as e:
             continue
 
-    # 2) Demo fallback catalog (also used for anime).
-    demo_items = filter_items(
-        list(store.items.values()),
-        content_types=content_types,
-        genre_ids=s.filters.genre_ids,
-    )
-    if not items:
-        items = demo_items
-    else:
-        # Merge in any demo items for selected types (primarily anime), avoiding duplicates.
-        seen_ids = {it.item_id for it in items}
-        items.extend([d for d in demo_items if d.item_id not in seen_ids])
-
+    # Store all new items we got from TMDB
     for it in items:
         if store.get_item_vec(it.item_id) is None:
             store.upsert_item(it, vectorize_item(it))
 
+    # Fall back to demo catalog only if TMDB returned nothing
+    if not items:
+        items = filter_items(
+            list(store.items.values()),
+            content_types=content_types,
+            genre_ids=s.filters.genre_ids,
+        )
+
+    # Return items the session hasn't seen yet
     unseen = [it for it in items if it.item_id not in s.seen_item_ids]
-    return FeedResponse(session_id=session_id, items=unseen[: max(1, min(batch_size, 25))])
+    random.shuffle(unseen)
+    return FeedResponse(session_id=session_id, items=unseen[:max(1, min(batch_size, 25))])
 
 
 @app.post("/swipe", response_model=SwipeResponse)
@@ -136,8 +145,11 @@ async def post_swipe(req: SwipeRequest) -> SwipeResponse:
     if req.item_id not in s.seen_item_ids:
         s.seen_item_ids.add(req.item_id)
         if req.direction == "right":
+            times_liked = s.like_counts.get(req.item_id, 0)
+            weight = 2.0 if times_liked > 0 else 1.0
+            s.like_counts[req.item_id] = times_liked + 1
             s.right_item_ids.append(req.item_id)
-            s.profile_vec = update_profile_mean(s.profile_vec, vec, n_seen=len(s.right_item_ids))
+            s.profile_vec = update_profile_mean(s.profile_vec, vec, n_seen=len(s.right_item_ids), weight=weight)
         else:
             s.left_item_ids.append(req.item_id)
 
@@ -155,9 +167,13 @@ async def get_recommendation(session_id: str) -> RecommendationResponse:
     if not s:
         raise HTTPException(status_code=404, detail="session not found")
 
+    effective_types = list(s.filters.content_types or [])
+    if ContentType.anime in effective_types and ContentType.tv not in effective_types:
+        effective_types.append(ContentType.tv)
+
     all_items = filter_items(
         list(store.items.values()),
-        content_types=s.filters.content_types,
+        content_types=effective_types,
         genre_ids=s.filters.genre_ids,
     )
     candidates = [i for i in all_items if i.item_id not in s.seen_item_ids]

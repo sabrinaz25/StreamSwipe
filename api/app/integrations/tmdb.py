@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from fastapi import params
+
 import httpx
 
 from app.models import ContentType, FeedItem
@@ -12,7 +14,7 @@ class TMDBClient:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
 
-    async def discover(self, *, content_type: ContentType, genre_ids: list[int], page: int = 1) -> list[FeedItem]:
+    async def discover(self, *, content_type: ContentType, genre_ids: list[int], page: int = 1, extra_params: dict[str, Any] | None = None,) -> list[FeedItem]:
         if not self._api_key:
             return []
 
@@ -24,6 +26,9 @@ class TMDBClient:
             "with_genres": ",".join(str(g) for g in genre_ids) if genre_ids else None,
             "sort_by": "popularity.desc",
         }
+        if extra_params:
+            params.update(extra_params)
+
         params = {k: v for k, v in params.items() if v is not None}
 
         async with httpx.AsyncClient(timeout=15.0) as client:
