@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.integrations.tmdb import TMDBClient
 from app.models import (
+    FeedItem,
     FeedResponse,
     RecommendationResponse,
     SessionCreateRequest,
@@ -79,24 +80,39 @@ async def get_feed(session_id: str, batch_size: int = 15) -> FeedResponse:
     if not s:
         raise HTTPException(status_code=404, detail="session not found")
 
-    items = []
-    if s.filters.content_type.value in ("movie", "tv"):
+    content_types = s.filters.content_types or []
+    if not content_types:
+        content_types = []
+
+    items: list[FeedItem] = []
+
+    # 1) Pull items from TMDB for movie/tv if configured.
+    for ct in content_types:
+        if ct.value not in ("movie", "tv"):
+            continue
         try:
-            items = await tmdb.discover(
-                content_type=s.filters.content_type,
-                genre_ids=s.filters.genre_ids,
-                page=1,
+            items.extend(
+                await tmdb.discover(
+                    content_type=ct,
+                    genre_ids=s.filters.genre_ids,
+                    page=1,
+                )
             )
         except Exception:
-            items = []
+            continue
 
+    # 2) Demo fallback catalog (also used for anime).
+    demo_items = filter_items(
+        list(store.items.values()),
+        content_types=content_types,
+        genre_ids=s.filters.genre_ids,
+    )
     if not items:
-        demo_items = filter_items(
-            list(store.items.values()),
-            content_type=s.filters.content_type,
-            genre_ids=s.filters.genre_ids,
-        )
         items = demo_items
+    else:
+        # Merge in any demo items for selected types (primarily anime), avoiding duplicates.
+        seen_ids = {it.item_id for it in items}
+        items.extend([d for d in demo_items if d.item_id not in seen_ids])
 
     for it in items:
         if store.get_item_vec(it.item_id) is None:
@@ -141,7 +157,7 @@ async def get_recommendation(session_id: str) -> RecommendationResponse:
 
     all_items = filter_items(
         list(store.items.values()),
-        content_type=s.filters.content_type,
+        content_types=s.filters.content_types,
         genre_ids=s.filters.genre_ids,
     )
     candidates = [i for i in all_items if i.item_id not in s.seen_item_ids]

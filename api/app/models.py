@@ -16,7 +16,7 @@ SwipeDirection = Literal["left", "right"]
 
 
 class Filters(BaseModel):
-    content_type: ContentType = Field(default=ContentType.movie)
+    content_types: list[ContentType] = Field(default_factory=lambda: [ContentType.movie])
     genre_ids: list[int] = Field(default_factory=list)
     mood: str | None = Field(default=None, max_length=64)
 

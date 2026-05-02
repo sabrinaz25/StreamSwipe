@@ -2,7 +2,7 @@ export type ContentType = "movie" | "tv" | "anime";
 export type SwipeDirection = "left" | "right";
 
 export type Filters = {
-  content_type: ContentType;
+  content_types: ContentType[];
   genre_ids: number[];
   mood?: string | null;
 };

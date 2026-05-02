@@ -17,7 +17,7 @@ type SessionState = {
   reset: () => void;
 };
 
-const defaultFilters: Filters = { content_type: "movie", genre_ids: [], mood: null };
+const defaultFilters: Filters = { content_types: ["movie"], genre_ids: [], mood: null };
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   sessionId: null,

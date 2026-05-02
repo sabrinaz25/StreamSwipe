@@ -2,7 +2,7 @@ import * as React from "react";
 import { SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "../components/Button";
-import { Card } from "../components/Card";
+import { SwipeDeck } from "../components/SwipeDeck";
 import { colors } from "../theme/colors";
 import { useSessionStore } from "../state/sessionStore";
 
@@ -32,7 +32,12 @@ export function SwipeScreen({ navigation }: { navigation: any }) {
 
         <View style={styles.deck}>
           {current ? (
-            <Card item={current} />
+            <SwipeDeck
+              item={current}
+              onSwipe={async (direction, item) => {
+                await swipe(item.item_id, direction);
+              }}
+            />
           ) : (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>{isLoading ? "Loading..." : "No more items"}</Text>

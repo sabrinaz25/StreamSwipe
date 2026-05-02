@@ -30,11 +30,11 @@ export function FilterScreen({ navigation }: { navigation: any }) {
   const isLoading = useSessionStore((s) => s.isLoading);
   const error = useSessionStore((s) => s.error);
 
-  const [contentType, setContentType] = React.useState<ContentType>("movie");
+  const [contentTypes, setContentTypes] = React.useState<ContentType[]>(["movie"]);
 
   const filters: Filters = React.useMemo(
-    () => ({ content_type: contentType, genre_ids: [], mood: null }),
-    [contentType]
+    () => ({ content_types: contentTypes, genre_ids: [], mood: null }),
+    [contentTypes]
   );
 
   return (
@@ -46,11 +46,33 @@ export function FilterScreen({ navigation }: { navigation: any }) {
         <View style={styles.section}>
           <Text style={styles.label}>Content</Text>
           <View style={styles.row}>
-            <Choice label="Movies" active={contentType === "movie"} onPress={() => setContentType("movie")} />
+            <Choice
+              label="Movies"
+              active={contentTypes.includes("movie")}
+              onPress={() =>
+                setContentTypes((prev) =>
+                  prev.includes("movie") ? prev.filter((t) => t !== "movie") : [...prev, "movie"]
+                )
+              }
+            />
             <View style={{ width: 10 }} />
-            <Choice label="TV" active={contentType === "tv"} onPress={() => setContentType("tv")} />
+            <Choice
+              label="TV"
+              active={contentTypes.includes("tv")}
+              onPress={() =>
+                setContentTypes((prev) => (prev.includes("tv") ? prev.filter((t) => t !== "tv") : [...prev, "tv"]))
+              }
+            />
             <View style={{ width: 10 }} />
-            <Choice label="Anime" active={contentType === "anime"} onPress={() => setContentType("anime")} />
+            <Choice
+              label="Anime"
+              active={contentTypes.includes("anime")}
+              onPress={() =>
+                setContentTypes((prev) =>
+                  prev.includes("anime") ? prev.filter((t) => t !== "anime") : [...prev, "anime"]
+                )
+              }
+            />
           </View>
         </View>
 
@@ -59,10 +81,11 @@ export function FilterScreen({ navigation }: { navigation: any }) {
         <Button
           label={isLoading ? "Starting..." : "Start swiping"}
           onPress={async () => {
+            if (filters.content_types.length === 0) return;
             await startSession(filters);
             navigation.navigate("Swipe");
           }}
-          disabled={isLoading}
+          disabled={isLoading || filters.content_types.length === 0}
         />
         <Text style={styles.footnote}>
           Tip: on phone, set `EXPO_PUBLIC_API_BASE_URL` to your computer’s LAN IP (e.g. http://192.168.x.x:8000).

@@ -12,8 +12,9 @@ def load_demo_catalog() -> list[FeedItem]:
     return [FeedItem(**r) for r in raw]
 
 
-def filter_items(items: list[FeedItem], *, content_type: ContentType, genre_ids: list[int]) -> list[FeedItem]:
-    out = [i for i in items if i.content_type == content_type]
+def filter_items(items: list[FeedItem], *, content_types: list[ContentType], genre_ids: list[int]) -> list[FeedItem]:
+    allowed = set(content_types)
+    out = [i for i in items if i.content_type in allowed]
     if genre_ids:
         genre_set = set(genre_ids)
         out = [i for i in out if genre_set.intersection(i.genre_ids)]
