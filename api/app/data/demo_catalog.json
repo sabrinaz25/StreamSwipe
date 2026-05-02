@@ -1,0 +1,57 @@
+[
+  {
+    "item_id": "demo_movie_1",
+    "content_type": "movie",
+    "title": "Neon Heist",
+    "overview": "A crew of misfits attempts a high-tech robbery in a city where every streetlight has a camera.",
+    "poster_url": null,
+    "genre_ids": [28, 53],
+    "genres": ["Action", "Thriller"],
+    "keywords": ["heist", "surveillance", "teamwork", "double-cross"],
+    "rating": 7.4
+  },
+  {
+    "item_id": "demo_movie_2",
+    "content_type": "movie",
+    "title": "Quiet Orbit",
+    "overview": "An astronaut on a solo repair mission discovers a message that shouldn't exist.",
+    "poster_url": null,
+    "genre_ids": [878, 18],
+    "genres": ["Sci-Fi", "Drama"],
+    "keywords": ["space", "isolation", "mystery", "signal"],
+    "rating": 7.8
+  },
+  {
+    "item_id": "demo_tv_1",
+    "content_type": "tv",
+    "title": "City of Chefs",
+    "overview": "Rival kitchens battle for a coveted Michelin star while friendships and secrets simmer.",
+    "poster_url": null,
+    "genre_ids": [35, 18],
+    "genres": ["Comedy", "Drama"],
+    "keywords": ["cooking", "rivalry", "found-family", "ambition"],
+    "rating": 7.2
+  },
+  {
+    "item_id": "demo_anime_1",
+    "content_type": "anime",
+    "title": "Crimson Koi",
+    "overview": "A rookie exorcist bonds with a stubborn spirit fish and uncovers a war between clans.",
+    "poster_url": null,
+    "genre_ids": [16, 10759],
+    "genres": ["Animation", "Action & Adventure"],
+    "keywords": ["exorcist", "spirit", "clans", "training"],
+    "rating": 8.1
+  },
+  {
+    "item_id": "demo_anime_2",
+    "content_type": "anime",
+    "title": "Library of Tomorrow",
+    "overview": "In a future where memories are cataloged as books, a teen librarian finds a forbidden volume.",
+    "poster_url": null,
+    "genre_ids": [16, 9648],
+    "genres": ["Animation", "Mystery"],
+    "keywords": ["memories", "library", "forbidden", "identity"],
+    "rating": 8.0
+  }
+]

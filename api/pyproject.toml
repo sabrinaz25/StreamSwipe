@@ -1,0 +1,17 @@
+[project]
+name = "streamswipe-api"
+version = "0.1.0"
+description = "StreamSwipe FastAPI backend (feed/swipe/recommendation)"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.136.0",
+  "uvicorn[standard]>=0.46.0",
+  "pydantic>=2.13.0",
+  "python-dotenv>=1.2.0",
+  "httpx>=0.28.0",
+  "numpy>=2.4.0",
+]
+
+[dependency-groups]
+dev = []
+
