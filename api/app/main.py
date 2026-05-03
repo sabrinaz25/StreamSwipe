@@ -94,7 +94,7 @@ async def get_feed(session_id: str, batch_size: int = 20) -> FeedResponse:
 
         if key == "anime":
             try:
-                result = await tmdb.discover(content_type=ContentType.tv, genre_ids=[16], page=current_page, extra_params={"with_origin_country": "JP"})
+                result = await tmdb.discover(content_type=ContentType.tv, genre_ids=[16], page=current_page, extra_params={"with_origin_country": "JP", "without_genres": "10749", "vote_count.gte": 100, "certification_country": "US", "certification.lte": "TV-14"})
                 for it in result:
                     it = it.model_copy(update={"content_type": ContentType.anime})
                     if store.get_item_vec(it.item_id) is None:
@@ -107,7 +107,7 @@ async def get_feed(session_id: str, batch_size: int = 20) -> FeedResponse:
         if key not in ("movie", "tv"):
             continue
         try:
-            result = await tmdb.discover(content_type=ct, genre_ids=s.filters.genre_ids, page=current_page)
+            result = await tmdb.discover(content_type=ct, genre_ids=s.filters.genre_ids, page=current_page, extra_params={"vote_count.gte": 100})
             items.extend(result)
             s.tmdb_pages[key] = current_page + 1
         except Exception as e:
