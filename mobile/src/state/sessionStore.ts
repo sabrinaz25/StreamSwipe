@@ -11,6 +11,7 @@ type SessionState = {
   swiped: Record<string, "left" | "right">;
   isLoading: boolean;
   error: string | null;
+  autoMatchCount: number;
 
   startSession: (filters: Filters) => Promise<void>;
   loadMore: () => Promise<void>;
@@ -28,6 +29,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   swiped: {},
   isLoading: false,
   error: null,
+  autoMatchCount: 0,
 
   reset: () =>
     set({

@@ -178,7 +178,7 @@ async def get_recommendation(session_id: str) -> RecommendationResponse:
         content_types=effective_types,
         genre_ids=s.filters.genre_ids,
     )
-    candidates = [i for i in all_items if i.item_id not in s.seen_item_ids]
+    candidates = [i for i in all_items if i.item_id not in s.seen_item_ids and i.item_id not in s.recommended_item_ids]
 
     refit_cf_if_needed(store)
     cand_ids = {i.item_id for i in candidates}
@@ -192,9 +192,15 @@ async def get_recommendation(session_id: str) -> RecommendationResponse:
     )
     if not picked:
         raise HTTPException(status_code=400, detail="not enough items to recommend")
+    s.recommended_item_ids.add(picked.item.item_id)
 
     liked_items = [store.items[iid] for iid in s.right_item_ids if iid in store.items]
-    justification = build_justification(picked=picked.item, liked=liked_items)
+    justification = build_justification(
+        picked=picked.item,
+        liked=liked_items,
+        candidate_vecs=store.item_vecs,
+        profile_vec=s.profile_vec,
+    )
 
     return RecommendationResponse(
         session_id=session_id,

@@ -13,8 +13,18 @@ export function SwipeScreen({ navigation }: { navigation: any }) {
   const swipe = useSessionStore((s) => s.swipe);
   const loadMore = useSessionStore((s) => s.loadMore);
   const sessionId = useSessionStore((s) => s.sessionId);
+  const swiped = useSessionStore((s) => s.swiped);
 
   const current = feed[0] ?? null;
+  const rightCount = Object.values(swiped).filter((d) => d === "right").length;
+  const lastAutoMatchRef = useSessionStore((s) => s.autoMatchCount);;
+
+  React.useEffect(() => {
+    if (rightCount > 0 && rightCount % 10 === 0 && rightCount !== lastAutoMatchRef) {
+      useSessionStore.setState({ autoMatchCount: rightCount });
+      navigation.navigate("Match");
+    }
+  }, [rightCount, navigation]);
 
   React.useEffect(() => {
     if (sessionId && feed.length < 5 && !isLoading) void loadMore();
