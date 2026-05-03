@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import params
-
 import httpx
 
 from app.models import ContentType, FeedItem
@@ -19,9 +17,20 @@ TMDB_GENRE_MAP = {
 }
 
 class TMDBClient:
-    def __init__(self, *, api_key: str, base_url: str = "https://api.themoviedb.org/3") -> None:
+    def __init__(
+        self,
+        *,
+        api_key: str,
+        base_url: str = "https://api.themoviedb.org/3",
+        certification_country: str | None = None,
+        movie_certification_lte: str | None = None,
+        tv_certification_lte: str | None = None,
+    ) -> None:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
+        self._certification_country = (certification_country or "").strip() or None
+        self._movie_certification_lte = (movie_certification_lte or "").strip() or None
+        self._tv_certification_lte = (tv_certification_lte or "").strip() or None
 
     async def discover(self, *, content_type: ContentType, genre_ids: list[int], page: int = 1, extra_params: dict[str, Any] | None = None,) -> list[FeedItem]:
         if not self._api_key:
@@ -40,6 +49,14 @@ class TMDBClient:
                 "vote_count.gte": 100,
                 "without_genres": "10749",
             }
+            lte: str | None = None
+            if content_type == ContentType.movie:
+                lte = self._movie_certification_lte
+            else:
+                lte = self._tv_certification_lte
+            if self._certification_country and lte:
+                params["certification_country"] = self._certification_country
+                params["certification.lte"] = lte
             if extra_params:
                 params.update(extra_params)
             params = {k: v for k, v in params.items() if v is not None}
