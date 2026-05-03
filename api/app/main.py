@@ -21,6 +21,7 @@ from app.models import (
     SwipeResponse,
 )
 from app.services.catalog import filter_items, load_demo_catalog
+from app.services.collaborative import cf_dot_scores_for_session, refit_cf_if_needed
 from app.services.recommend import build_justification, pick_best
 from app.services.vectorize import update_profile_mean, vectorize_item
 from app.storage.memory import MemoryStore, SessionState
@@ -150,6 +151,7 @@ async def post_swipe(req: SwipeRequest) -> SwipeResponse:
             s.like_counts[req.item_id] = times_liked + 1
             s.right_item_ids.append(req.item_id)
             s.profile_vec = update_profile_mean(s.profile_vec, vec, n_seen=len(s.right_item_ids), weight=weight)
+            store.cf_dirty = True
         else:
             s.left_item_ids.append(req.item_id)
 
@@ -178,7 +180,16 @@ async def get_recommendation(session_id: str) -> RecommendationResponse:
     )
     candidates = [i for i in all_items if i.item_id not in s.seen_item_ids]
 
-    picked = pick_best(profile_vec=s.profile_vec, candidate_items=candidates, candidate_vecs=store.item_vecs)
+    refit_cf_if_needed(store)
+    cand_ids = {i.item_id for i in candidates}
+    cf_scores = cf_dot_scores_for_session(store, session_id, cand_ids)
+
+    picked = pick_best(
+        profile_vec=s.profile_vec,
+        candidate_items=candidates,
+        candidate_vecs=store.item_vecs,
+        cf_scores=cf_scores or None,
+    )
     if not picked:
         raise HTTPException(status_code=400, detail="not enough items to recommend")
 

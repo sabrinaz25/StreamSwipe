@@ -26,6 +26,9 @@ class MemoryStore:
         self.sessions: dict[str, SessionState] = {}
         self.items: dict[str, FeedItem] = {}
         self.item_vecs: dict[str, np.ndarray] = {}
+        # Collaborative filtering: refit when cf_dirty after implicit right-swipes.
+        self.cf_dirty: bool = True
+        self.cf_bundle: object | None = None
 
     @staticmethod
     def now_ms() -> int:
