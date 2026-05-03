@@ -46,6 +46,8 @@ class TMDBClient:
                 "include_adult": "false",
                 "with_genres": ",".join(str(g) for g in genre_ids) if genre_ids else None,
                 "sort_by": "popularity.desc",
+                "vote_count.gte": 100,
+                "without_genres": "10749",
             }
             lte: str | None = None
             if content_type == ContentType.movie:
@@ -91,4 +93,37 @@ class TMDBClient:
                 continue
 
         return all_items
+    
+    async def trending(self, *, content_type: ContentType, page: int = 1) -> list[FeedItem]:
+        if not self._api_key:
+            return []
+        media = "movie" if content_type == ContentType.movie else "tv"
+        params = {"api_key": self._api_key, "page": page}
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(f"{self._base_url}/trending/{media}/week", params=params)
+            r.raise_for_status()
+            data = r.json()
 
+        items = []
+        for row in data.get("results", []):
+            title = row.get("title") or row.get("name") or "Untitled"
+            poster_path = row.get("poster_path")
+            poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
+            tmdb_id = row.get("id")
+            genre_ids_list = row.get("genre_ids") or []
+            genres = [TMDB_GENRE_MAP[gid] for gid in genre_ids_list if gid in TMDB_GENRE_MAP]
+            items.append(
+                FeedItem(
+                    item_id=f"tmdb_{content_type.value}_{tmdb_id}",
+                    content_type=content_type,
+                    title=title,
+                    overview=row.get("overview") or "",
+                    poster_url=poster_url,
+                    genre_ids=genre_ids_list,
+                    genres=genres,
+                    keywords=[],
+                    rating=float(row.get("vote_average") or 0.0),
+                    metadata={"tmdb_id": tmdb_id},
+                )
+            )
+        return items

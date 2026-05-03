@@ -93,10 +93,10 @@ export function SwipeScreen({ navigation }: { navigation: any }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   container: { flex: 1, padding: 16, gap: 12 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: -8 },
   h1: { color: colors.text, fontSize: 28, fontWeight: "900" },
   deck: { flex: 1, justifyContent: "center" },
-  actions: { flexDirection: "row" },
+  actions: { flexDirection: "row", marginTop: "auto" },
   empty: {
     borderWidth: 1,
     borderColor: colors.border,
