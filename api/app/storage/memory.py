@@ -19,6 +19,7 @@ class SessionState:
     profile_vec: np.ndarray | None = None
     tmdb_pages: dict[str, int] = field(default_factory=dict)
     like_counts: dict[str, int] = field(default_factory=dict)
+    recommended_item_ids: set[str] = field(default_factory=set)
 
 
 class MemoryStore:

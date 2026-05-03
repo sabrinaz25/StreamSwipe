@@ -14,6 +14,23 @@ def _stable_hash(text: str) -> int:
 def vectorize_item(item: FeedItem, *, dim: int = 256) -> np.ndarray:
     v = np.zeros(dim + 1, dtype=np.float32)
 
+    if 16 in item.genre_ids:
+        if 28 in item.genre_ids or 10759 in item.genre_ids:
+            idx = _stable_hash("anime:action") % dim
+            v[idx] += 1.5
+        if 9648 in item.genre_ids:
+            idx = _stable_hash("anime:mystery") % dim
+            v[idx] += 1.5
+        if 10749 in item.genre_ids:
+            idx = _stable_hash("anime:romance") % dim
+            v[idx] += 1.5
+        if 878 in item.genre_ids or 10765 in item.genre_ids:
+            idx = _stable_hash("anime:scifi") % dim
+            v[idx] += 1.5
+        if 18 in item.genre_ids:
+            idx = _stable_hash("anime:drama") % dim
+            v[idx] += 1.5
+            
     for g in item.genres:
         idx = _stable_hash(f"genre:{g.lower()}") % dim
         v[idx] += 1.0
