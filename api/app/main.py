@@ -32,13 +32,22 @@ load_dotenv()
 APP_DEMO_MODE = os.getenv("APP_DEMO_MODE", "true").lower() == "true"
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3")
+TMDB_CERTIFICATION_COUNTRY = os.getenv("TMDB_CERTIFICATION_COUNTRY", "").strip() or None
+TMDB_MOVIE_CERTIFICATION_LTE = os.getenv("TMDB_MOVIE_CERTIFICATION_LTE", "").strip() or None
+TMDB_TV_CERTIFICATION_LTE = os.getenv("TMDB_TV_CERTIFICATION_LTE", "").strip() or None
 
 ALLOW_CORS_ORIGINS: Sequence[str] = tuple(
     o.strip() for o in os.getenv("APP_ALLOW_CORS_ORIGINS", "http://localhost:19006").split(",") if o.strip()
 )
 
 store = MemoryStore()
-tmdb = TMDBClient(api_key=TMDB_API_KEY, base_url=TMDB_BASE_URL)
+tmdb = TMDBClient(
+    api_key=TMDB_API_KEY,
+    base_url=TMDB_BASE_URL,
+    certification_country=TMDB_CERTIFICATION_COUNTRY,
+    movie_certification_lte=TMDB_MOVIE_CERTIFICATION_LTE,
+    tv_certification_lte=TMDB_TV_CERTIFICATION_LTE,
+)
 
 app = FastAPI(title="StreamSwipe API", version="0.1.0")
 app.add_middleware(
@@ -189,6 +198,7 @@ async def get_recommendation(session_id: str) -> RecommendationResponse:
         candidate_items=candidates,
         candidate_vecs=store.item_vecs,
         cf_scores=cf_scores or None,
+        disliked_item_ids=s.left_item_ids,
     )
     if not picked:
         raise HTTPException(status_code=400, detail="not enough items to recommend")

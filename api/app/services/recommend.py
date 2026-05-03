@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 import random
 
@@ -42,6 +43,43 @@ def _content_scores(
     return out
 
 
+def _dislike_similarity_raw(
+    *,
+    candidate_items: list[FeedItem],
+    candidate_vecs: dict[str, np.ndarray],
+    disliked_item_ids: Sequence[str],
+) -> dict[str, float]:
+    """Max cosine(candidate, disliked) per candidate; high means close to something the user disliked."""
+    d_vecs = [
+        candidate_vecs[i]
+        for i in dict.fromkeys(disliked_item_ids)
+        if i in candidate_vecs
+    ]
+    if not d_vecs:
+        return {it.item_id: 0.0 for it in candidate_items}
+
+    out: dict[str, float] = {}
+    for item in candidate_items:
+        v = candidate_vecs.get(item.item_id)
+        if v is None:
+            out[item.item_id] = 0.0
+            continue
+        out[item.item_id] = max(cosine_similarity(v, dv) for dv in d_vecs)
+    return out
+
+
+def _normalize_dislike_penalty(dislike_raw: dict[str, float]) -> dict[str, float]:
+    if not dislike_raw:
+        return {}
+    vals = list(dislike_raw.values())
+    if max(vals) < 1e-9:
+        return {k: 0.0 for k in dislike_raw}
+    lo, hi = min(vals), max(vals)
+    if hi - lo < 1e-9:
+        return {k: 1.0 for k in dislike_raw}
+    return {k: (v - lo) / (hi - lo) for k, v in dislike_raw.items()}
+
+
 def _cf_signal_strength(cf_raw: dict[str, float]) -> bool:
     if not cf_raw:
         return False
@@ -56,6 +94,8 @@ def pick_best(
     candidate_vecs: dict[str, np.ndarray],
     cf_scores: dict[str, float] | None = None,
     cf_blend_weight: float = 0.38,
+    disliked_item_ids: Sequence[str] | None = None,
+    dislike_penalty_weight: float = 0.35,
 ) -> ScoredItem | None:
     if not candidate_items:
         return None
@@ -69,7 +109,20 @@ def pick_best(
     use_cf = cf_scores is not None and _cf_signal_strength(cf_raw)
     cf_n = _minmax_scores(cf_raw) if use_cf else {}
 
+    dislikes = list(disliked_item_ids) if disliked_item_ids else []
+    dislike_raw = (
+        _dislike_similarity_raw(
+            candidate_items=candidate_items,
+            candidate_vecs=candidate_vecs,
+            disliked_item_ids=dislikes,
+        )
+        if dislikes
+        else {it.item_id: 0.0 for it in candidate_items}
+    )
+    dislike_n = _normalize_dislike_penalty(dislike_raw) if dislikes else {it.item_id: 0.0 for it in candidate_items}
+
     w = cf_blend_weight if use_cf else 0.0
+    w_d = max(0.0, min(1.0, float(dislike_penalty_weight)))
     best_item: FeedItem | None = None
     best_score = -1.0
     for item in candidate_items:
@@ -83,8 +136,11 @@ def pick_best(
         if profile_vec is None and not use_cf:
             combined = content_raw.get(cid, 0.0)
 
-        if combined > best_score:
-            best_score = combined
+        d_part = dislike_n.get(cid, 0.0)
+        adjusted = combined * (1.0 - w_d * d_part)
+
+        if adjusted > best_score:
+            best_score = adjusted
             best_item = item
 
     if best_item is None:
